@@ -1,8 +1,9 @@
 // Contract addresses - will be updated after deployment
 // Clean addresses to remove any whitespace/newlines
+// Support both NEXT_PUBLIC_ (for browser) and non-prefixed (for Node.js scripts)
 export const CONTRACTS = {
-  AI_ORACLE: ((process.env.NEXT_PUBLIC_AIORACLE_ADDRESS || '0x0000000000000000000000000000000000000000').trim()) as `0x${string}`,
-  UMA_ADAPTER: ((process.env.NEXT_PUBLIC_UMA_ADAPTER_ADDRESS || '0x0000000000000000000000000000000000000000').trim()) as `0x${string}`,
+  AI_ORACLE: ((process.env.NEXT_PUBLIC_AIORACLE_ADDRESS || process.env.AIORACLE_ADDRESS || '0x0000000000000000000000000000000000000000').trim()) as `0x${string}`,
+  UMA_ADAPTER: ((process.env.NEXT_PUBLIC_UMA_ADAPTER_ADDRESS || process.env.UMA_ADAPTER_ADDRESS || '0x0000000000000000000000000000000000000000').trim()) as `0x${string}`,
 };
 
 // AIOracle ABI - essential functions only
@@ -193,7 +194,7 @@ export const AI_ORACLE_ABI = [
       { internalType: 'bytes32', name: 'questionId', type: 'bytes32' },
       { internalType: 'bool', name: 'outcome', type: 'bool' },
       { internalType: 'string', name: 'reasoning', type: 'string' },
-      { internalType: 'string', name: 'sources', type: 'string' },
+      { internalType: 'string[]', name: 'sources', type: 'string[]' },
     ],
     name: 'proposeResolution',
     outputs: [],

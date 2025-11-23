@@ -2,7 +2,16 @@ import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { bscTestnet } from 'viem/chains';
 import { analyzeMarketWithAI, gatherDataSources } from './openai';
-import { CONTRACTS, AI_ORACLE_ABI } from './contracts';
+import { AI_ORACLE_ABI } from './contracts';
+
+// Get contract address at runtime (after env vars are loaded)
+const getContractAddress = () => {
+  const address = (process.env.NEXT_PUBLIC_AIORACLE_ADDRESS || process.env.AIORACLE_ADDRESS || '').trim();
+  if (!address || address === '0x0000000000000000000000000000000000000000') {
+    throw new Error('AIORACLE_ADDRESS not configured');
+  }
+  return address as `0x${string}`;
+};
 
 export interface MarketToResolve {
   questionId: string;
@@ -20,7 +29,7 @@ export class AIResolver {
     this.account = privateKeyToAccount(privateKey as `0x${string}`);
 
     // Create transport with custom RPC if available
-    const transport = http(process.env.NEXT_PUBLIC_BNB_TESTNET_RPC);
+    const transport = http(process.env.NEXT_PUBLIC_BNB_TESTNET_RPC || process.env.BNB_TESTNET_RPC);
 
     // Create public client for reading
     this.publicClient = createPublicClient({
@@ -47,16 +56,19 @@ export class AIResolver {
         return;
       }
 
-      // Check if market already has a proposal
-      const proposal = await this.publicClient.readContract({
-        address: CONTRACTS.AI_ORACLE,
+      // Check market status
+      const marketData = await this.publicClient.readContract({
+        address: getContractAddress(),
         abi: AI_ORACLE_ABI,
-        functionName: 'getProposal',
+        functionName: 'getMarket',
         args: [market.questionId as `0x${string}`],
-      });
+      }) as any;
 
-      if ((proposal as any).exists) {
-        console.log('Market already has a proposal');
+      console.log(`Market status: ${marketData.status}`);
+      
+      // Status: 0 = PENDING, 1 = PROPOSED, 2 = DISPUTED, 3 = FINALIZED
+      if (marketData.status !== 0) {
+        console.log(`Market not in PENDING status (status: ${marketData.status}), skipping...`);
         return;
       }
 
@@ -82,20 +94,17 @@ export class AIResolver {
         return;
       }
 
-      // Prepare sources string
-      const sourcesString = result.sources.join(', ');
-
-      // Submit proposal to contract
+      // Submit proposal to contract (sources as array)
       console.log('Submitting proposal to contract...');
       const hash = await this.walletClient.writeContract({
-        address: CONTRACTS.AI_ORACLE,
+        address: getContractAddress(),
         abi: AI_ORACLE_ABI,
         functionName: 'proposeResolution',
         args: [
           market.questionId as `0x${string}`,
           result.outcome,
           result.reasoning,
-          sourcesString,
+          result.sources,
         ],
       });
 
@@ -119,35 +128,30 @@ export class AIResolver {
 
       // Get the latest block number to define a reasonable scan range
       const latestBlock = await this.publicClient.getBlockNumber();
-      const fromBlock = latestBlock > 2000n ? latestBlock - 2000n : 0n; // Scan last 2k blocks
+      const fromBlock = latestBlock > 200000n ? latestBlock - 200000n : 0n; // Scan last 200k blocks
       console.log(`Scanning for markets from block ${fromBlock} to ${latestBlock}...`);
+      console.log(`Contract address: ${getContractAddress()}`);
 
-      // Get logs in batches to avoid RPC limits
-      const BATCH_SIZE = 10n;
+      // Use getContractEvents like frontend does - scan in batches
+      const BATCH_SIZE = 1000n;
       let allLogs = [];
+      
       for (let currentBlock = fromBlock; currentBlock <= latestBlock; currentBlock += BATCH_SIZE) {
         const toBlock = currentBlock + BATCH_SIZE - 1n > latestBlock ? latestBlock : currentBlock + BATCH_SIZE - 1n;
         try {
-          const batchLogs = await this.publicClient.getLogs({
-            address: CONTRACTS.AI_ORACLE,
-            event: {
-              type: 'event',
-              name: 'MarketCreated',
-              inputs: [
-                { type: 'bytes32', indexed: true, name: 'questionId' },
-                { type: 'string', indexed: false, name: 'question' },
-                { type: 'uint256', indexed: false, name: 'resolutionTime' },
-                { type: 'uint256', indexed: false, name: 'livenessPeriod' },
-              ],
-            },
+          const batchLogs = await this.publicClient.getContractEvents({
+            address: getContractAddress(),
+            abi: AI_ORACLE_ABI,
+            eventName: 'MarketCreated',
             fromBlock: currentBlock,
             toBlock: toBlock,
           });
           allLogs.push(...batchLogs);
-        } catch (e) {
-          console.warn(`Warning: Failed to get logs for batch ${currentBlock}-${toBlock}.`, e);
+        } catch (e: any) {
+          console.warn(`Warning: Failed to get logs for batch ${currentBlock}-${toBlock}:`, e.message);
         }
       }
+      
       const logs = allLogs;
 
       console.log(`Found ${logs.length} markets`);
@@ -167,7 +171,13 @@ export class AIResolver {
         const now = Math.floor(Date.now() / 1000);
         if (now >= Number(market.resolutionTime)) {
           console.log(`Market ready for resolution: ${market.question}`);
-          await this.resolveMarket(market);
+          try {
+            await this.resolveMarket(market);
+            console.log(`✅ Market resolved successfully: ${market.question}`);
+          } catch (error: any) {
+            console.error(`❌ Failed to resolve market: ${market.question}`, error.shortMessage || error.message);
+            // Continue with next market
+          }
         }
       }
 

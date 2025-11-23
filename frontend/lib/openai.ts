@@ -58,19 +58,19 @@ Respond in JSON format:
   try {
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
           content:
-            'You are an expert AI oracle that resolves prediction markets with high accuracy and objectivity. Always provide factual, well-reasoned responses.',
+            'You are an expert AI oracle that resolves prediction markets with high accuracy and objectivity. Always provide factual, well-reasoned responses in JSON format.',
         },
         {
           role: 'user',
           content: prompt,
         },
       ],
-      temperature: 0.3, // Lower temperature for more consistent, factual responses
+      temperature: 0.3,
       response_format: { type: 'json_object' },
     });
 
