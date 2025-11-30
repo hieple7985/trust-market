@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAIResolver } from '@/lib/ai-resolver';
+import { createICPResolver } from '@/lib/icp-resolver';
 
 /**
  * API Route: POST /api/resolve
  * 
- * Manually trigger AI resolution for a specific market or all markets
+ * Trigger AI resolution for markets on BNB and/or ICP
  * 
  * Body:
+ * - chain (optional): 'bnb' | 'icp' | 'all' (default: 'all')
  * - questionId (optional): Specific market to resolve
  * 
  * Example:
  * POST /api/resolve
- * { "questionId": "0x123..." }
- * 
- * Or resolve all markets:
- * POST /api/resolve
+ * { "chain": "all" }
  */
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get('authorization');
@@ -23,7 +22,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Check if API key is configured
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
@@ -31,35 +29,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.AI_BOT_PRIVATE_KEY) {
-      return NextResponse.json(
-        { error: 'AI bot private key not configured' },
-        { status: 500 }
-      );
+    const body = await request.json().catch(() => ({}));
+    const chain = body.chain || 'all';
+
+    const results: { bnb?: string; icp?: { resolved: number; total: number } } = {};
+
+    // Resolve BNB markets
+    if ((chain === 'all' || chain === 'bnb') && process.env.AI_BOT_PRIVATE_KEY) {
+      try {
+        console.log('Resolving BNB markets...');
+        const bnbResolver = createAIResolver();
+        await bnbResolver.monitorAndResolveMarkets();
+        results.bnb = 'completed';
+      } catch (error: any) {
+        console.error('BNB resolution error:', error.message);
+        results.bnb = `error: ${error.message}`;
+      }
     }
 
-    const body = await request.json();
-    const { questionId } = body;
-
-    // Create resolver
-    const resolver = createAIResolver();
-
-    if (questionId) {
-      // Resolve specific market
-      // Note: You would need to fetch market details first
-      return NextResponse.json(
-        { error: 'Single market resolution not yet implemented' },
-        { status: 501 }
-      );
-    } else {
-      // Resolve all markets
-      await resolver.monitorAndResolveMarkets();
-
-      return NextResponse.json({
-        success: true,
-        message: 'Markets resolved successfully',
-      });
+    // Resolve ICP markets
+    if (chain === 'all' || chain === 'icp') {
+      try {
+        console.log('Resolving ICP markets...');
+        const icpResolver = createICPResolver();
+        results.icp = await icpResolver.monitorAndResolveMarkets();
+      } catch (error: any) {
+        console.error('ICP resolution error:', error.message);
+        results.icp = { resolved: 0, total: 0 };
+      }
     }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Resolution completed',
+      results,
+    });
   } catch (error: any) {
     console.error('Error in resolve API:', error);
     return NextResponse.json(
@@ -73,11 +77,17 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    message: 'AI Resolution API is running',
+    message: 'AI Resolution API is running (BNB + ICP)',
     configured: {
       openai: !!process.env.OPENAI_API_KEY,
-      privateKey: !!process.env.AI_BOT_PRIVATE_KEY,
-      contract: !!process.env.NEXT_PUBLIC_AIORACLE_ADDRESS,
+      bnb: {
+        privateKey: !!process.env.AI_BOT_PRIVATE_KEY,
+        contract: !!process.env.NEXT_PUBLIC_AIORACLE_ADDRESS,
+      },
+      icp: {
+        canisterId: process.env.NEXT_PUBLIC_ICP_BACKEND_CANISTER_ID || 'oyleh-yqaaa-aaaau-aczbq-cai',
+        host: process.env.NEXT_PUBLIC_IC_HOST || 'https://icp0.io',
+      },
     },
   });
 }
