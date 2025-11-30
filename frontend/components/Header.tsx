@@ -4,14 +4,16 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Layout, Menu, Space, Typography, Drawer, Button } from 'antd';
 import { HomeOutlined, AppstoreOutlined, PlusCircleOutlined, MenuOutlined } from '@ant-design/icons';
-import { ConnectWallet } from './ConnectWallet';
-import { usePathname } from 'next/navigation';
+import { WalletDropdown } from './WalletDropdown';
+import { ChainSelector } from './ChainSelector';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 const { Header: AntHeader } = Layout;
 const { Title } = Typography;
 
 export function Header() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   const menuItems = [
@@ -26,11 +28,22 @@ export function Header() {
       label: <Link href="/markets">Markets</Link>,
     },
     {
-      key: '/create',
+      key: '/create-bnb',
       icon: <PlusCircleOutlined />,
-      label: <Link href="/create">Create</Link>,
+      label: <Link href="/create?chain=bnb">🔶 BNB · Create</Link>,
+    },
+    {
+      key: '/create-icp',
+      icon: <PlusCircleOutlined />,
+      label: <Link href="/create?chain=icp">∞ ICP · Create</Link>,
     },
   ];
+
+  let selectedKey = pathname || '';
+  if (pathname === '/create') {
+    const chain = searchParams?.get('chain');
+    selectedKey = chain === 'icp' ? '/create-icp' : '/create-bnb';
+  }
 
   return (
     <>
@@ -46,10 +59,12 @@ export function Header() {
         position: 'sticky',
         top: 0,
         zIndex: 1000,
+        gap: '16px',
       }}>
-        <Space size="small" style={{ flex: 1, height: '56px' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <Title level={4} style={{ margin: 0, color: '#1890ff', lineHeight: '56px', fontSize: '18px' }}>
+        {/* Left: Logo + Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+          <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <Title level={4} style={{ margin: 0, color: '#1890ff', lineHeight: '56px', fontSize: '18px', whiteSpace: 'nowrap' }}>
               TrustMarket
             </Title>
           </Link>
@@ -57,22 +72,23 @@ export function Header() {
           {/* Desktop Menu */}
           <Menu
             mode="horizontal"
-            selectedKeys={[pathname || '']}
+            selectedKeys={[selectedKey]}
             items={menuItems}
             style={{
               border: 'none',
               background: 'transparent',
-              minWidth: 250,
+              flex: 1,
+              minWidth: 0,
               lineHeight: '54px',
-              display: 'none',
             }}
             className="desktop-menu"
           />
-        </Space>
+        </div>
 
-        {/* Desktop Wallet */}
-        <div className="desktop-wallet">
-          <ConnectWallet />
+        {/* Right: Chain Selector + Wallet */}
+        <div className="desktop-wallet" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <ChainSelector />
+          <WalletDropdown />
         </div>
 
         {/* Mobile Menu Button */}
@@ -81,7 +97,6 @@ export function Header() {
           icon={<MenuOutlined />}
           onClick={() => setDrawerVisible(true)}
           className="mobile-menu-button"
-          style={{ display: 'none' }}
         />
       </AntHeader>
 
@@ -95,13 +110,16 @@ export function Header() {
       >
         <Menu
           mode="vertical"
-          selectedKeys={[pathname || '']}
+          selectedKeys={[selectedKey]}
           items={menuItems}
           onClick={() => setDrawerVisible(false)}
           style={{ border: 'none' }}
         />
         <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
-          <ConnectWallet />
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <ChainSelector />
+            <WalletDropdown />
+          </Space>
         </div>
       </Drawer>
 
@@ -111,7 +129,7 @@ export function Header() {
             display: flex !important;
           }
           .desktop-wallet {
-            display: block !important;
+            display: flex !important;
           }
           .mobile-menu-button {
             display: none !important;

@@ -7,8 +7,15 @@ import ClientProviders from '@/components/ClientProviders';
 export const metadata: Metadata = {
   title: "TrustMarket - AI Speed + Economic Security",
   description: "The ONLY prediction market with AI speed + UMA economic security. 5-minute AI resolution with $1M+ UMA backstop.",
-  keywords: ["prediction markets", "UMA", "AI oracle", "BNB Chain", "DeFi", "economic security"],
+  keywords: ["prediction markets", "UMA", "AI oracle", "BNB Chain", "ICP", "DeFi", "economic security", "multi-chain"],
   authors: [{ name: "TrustMarket Team" }],
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: "TrustMarket - AI Speed + Economic Security",
     description: "5-minute AI resolution with $1M+ UMA backstop",

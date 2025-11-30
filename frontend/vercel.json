@@ -2,8 +2,7 @@
   "crons": [
     {
       "path": "/api/resolve",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
-

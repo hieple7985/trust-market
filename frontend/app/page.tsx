@@ -72,6 +72,49 @@ export default function Home() {
             </Col>
           </Row>
 
+          {/* Supported Chains */}
+          <Card style={{ marginBottom: 32, maxWidth: 600, margin: '0 auto 32px' }}>
+            <Title level={5} style={{ marginBottom: 16, color: '#666' }}>Powered by</Title>
+            <Row gutter={[32, 16]} justify="center" align="middle">
+              <Col>
+                <Space direction="vertical" align="center" size={8}>
+                  <div style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #F0B90B 0%, #F8D12F 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(240, 185, 11, 0.3)',
+                  }}>
+                    <span style={{ fontSize: 32, fontWeight: 'bold', color: '#fff' }}>B</span>
+                  </div>
+                  <span style={{ fontWeight: 600, color: '#333' }}>BNB Chain</span>
+                  <Tag color="gold">EVM</Tag>
+                </Space>
+              </Col>
+              <Col>
+                <Space direction="vertical" align="center" size={8}>
+                  <div style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #29ABE2 0%, #522785 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(82, 39, 133, 0.3)',
+                  }}>
+                    <span style={{ fontSize: 28, fontWeight: 'bold', color: '#fff' }}>∞</span>
+                  </div>
+                  <span style={{ fontWeight: 600, color: '#333' }}>Internet Computer</span>
+                  <Tag color="purple">ICP</Tag>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+
           {/* Stats */}
           <Row gutter={[16, 16]} style={{ marginBottom: 32, maxWidth: 800, margin: '0 auto 32px' }}>
             <Col xs={24} sm={8}>

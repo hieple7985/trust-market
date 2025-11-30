@@ -1,0 +1,27 @@
+{
+  "dfx": "0.29.2",
+  "canisters": {
+    "icp_backend": {
+      "type": "motoko",
+      "main": "icp-canisters/backend/main.mo"
+    }
+  },
+  "networks": {
+    "local": {
+      "type": "ephemeral",
+      "bind": "127.0.0.1:8000",
+      "replica": {
+        "subnet_type": "application"
+      }
+    },
+    "ic": {
+      "type": "persistent",
+      "providers": ["https://ic0.app"]
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  }
+}
