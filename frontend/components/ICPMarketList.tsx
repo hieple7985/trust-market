@@ -1,17 +1,24 @@
 'use client';
 
-import { Card, Button, Space, Typography, Tag, Spin } from 'antd';
-import { PlusCircleOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Card, Button, Space, Typography, Tag, Spin, Modal, Input, Radio } from 'antd';
+import { PlusCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useICPAuth, useICPMarkets } from '@/hooks/useICP';
 import { convertToDate, formatMarketStatus } from '@/lib/icp-service';
 import { ChainBadge } from './ChainBadge';
 
 const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 export function ICPMarketList() {
   const { authenticated, principal, login, logout, loading: authLoading } = useICPAuth();
-  const { markets, loading: marketsLoading, placeBet } = useICPMarkets();
+  const { markets, loading: marketsLoading, placeBet, proposeResolution, finalizeMarket } = useICPMarkets();
+  
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
+  const [resolveOutcome, setResolveOutcome] = useState<boolean>(true);
+  const [resolveReasoning, setResolveReasoning] = useState('');
 
   const handlePlaceBet = async (marketId: string, isYes: boolean) => {
     try {
@@ -25,6 +32,46 @@ export function ICPMarketList() {
     } catch (error) {
       console.error('Failed to place bet:', error);
       alert('Failed to place bet');
+    }
+  };
+
+  const openResolveModal = (marketId: string) => {
+    setSelectedMarket(marketId);
+    setResolveOutcome(true);
+    setResolveReasoning('');
+    setResolveModalOpen(true);
+  };
+
+  const handleProposeResolution = async () => {
+    if (!selectedMarket || !resolveReasoning.trim()) {
+      alert('Please provide reasoning');
+      return;
+    }
+    try {
+      const success = await proposeResolution(selectedMarket, resolveOutcome, resolveReasoning);
+      if (success) {
+        alert('Resolution proposed successfully!');
+        setResolveModalOpen(false);
+      } else {
+        alert('Failed to propose resolution');
+      }
+    } catch (error) {
+      console.error('Failed to propose resolution:', error);
+      alert('Failed to propose resolution');
+    }
+  };
+
+  const handleFinalizeMarket = async (marketId: string) => {
+    try {
+      const success = await finalizeMarket(marketId);
+      if (success) {
+        alert('Market finalized successfully!');
+      } else {
+        alert('Failed to finalize market');
+      }
+    } catch (error) {
+      console.error('Failed to finalize market:', error);
+      alert('Failed to finalize market');
     }
   };
 
@@ -120,12 +167,32 @@ export function ICPMarketList() {
                   </div>
                   
                   {formatMarketStatus(market.status) === 'Pending' && (
-                    <Space>
+                    <Space wrap>
                       <Button type="primary" size="small" onClick={() => handlePlaceBet(market.id, true)}>
                         Bet YES (100)
                       </Button>
                       <Button danger size="small" onClick={() => handlePlaceBet(market.id, false)}>
                         Bet NO (100)
+                      </Button>
+                      <Button 
+                        size="small" 
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => openResolveModal(market.id)}
+                      >
+                        Resolve
+                      </Button>
+                    </Space>
+                  )}
+                  
+                  {formatMarketStatus(market.status) === 'Proposed' && (
+                    <Space>
+                      <Tag color="orange">Proposed: {market.outcome[0] ? 'YES' : 'NO'}</Tag>
+                      <Button 
+                        type="primary" 
+                        size="small"
+                        onClick={() => handleFinalizeMarket(market.id)}
+                      >
+                        Finalize
                       </Button>
                     </Space>
                   )}
@@ -149,6 +216,38 @@ export function ICPMarketList() {
           </Space>
         )}
       </Card>
+
+      <Modal
+        title="Resolve Market"
+        open={resolveModalOpen}
+        onOk={handleProposeResolution}
+        onCancel={() => setResolveModalOpen(false)}
+        okText="Propose Resolution"
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Text strong>Outcome:</Text>
+            <Radio.Group 
+              value={resolveOutcome} 
+              onChange={(e) => setResolveOutcome(e.target.value)}
+              style={{ marginLeft: 12 }}
+            >
+              <Radio value={true}>YES</Radio>
+              <Radio value={false}>NO</Radio>
+            </Radio.Group>
+          </div>
+          <div>
+            <Text strong>Reasoning:</Text>
+            <TextArea
+              value={resolveReasoning}
+              onChange={(e) => setResolveReasoning(e.target.value)}
+              placeholder="Explain why this outcome is correct..."
+              rows={4}
+              style={{ marginTop: 8 }}
+            />
+          </div>
+        </Space>
+      </Modal>
     </Space>
   );
 }

@@ -138,6 +138,48 @@ export function useICPMarkets() {
     }
   }, [fetchMarkets]);
 
+  const proposeResolution = useCallback(async (
+    marketId: string,
+    outcome: boolean,
+    reasoning: string
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const actor = await getActor();
+      const success = await actor.proposeResolution(marketId, outcome, reasoning);
+      if (success) {
+        await fetchMarkets();
+      }
+      return success;
+    } catch (err) {
+      console.error('Failed to propose resolution:', err);
+      setError(err instanceof Error ? err.message : 'Failed to propose resolution');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchMarkets]);
+
+  const finalizeMarket = useCallback(async (marketId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const actor = await getActor();
+      const success = await actor.finalizeMarket(marketId);
+      if (success) {
+        await fetchMarkets();
+      }
+      return success;
+    } catch (err) {
+      console.error('Failed to finalize market:', err);
+      setError(err instanceof Error ? err.message : 'Failed to finalize market');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchMarkets]);
+
   useEffect(() => {
     fetchMarkets();
   }, [fetchMarkets]);
@@ -149,6 +191,8 @@ export function useICPMarkets() {
     fetchMarkets,
     createMarket,
     placeBet,
+    proposeResolution,
+    finalizeMarket,
   };
 }
 
